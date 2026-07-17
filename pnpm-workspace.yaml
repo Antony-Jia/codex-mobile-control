@@ -1,0 +1,14 @@
+packages:
+  - apps/*
+  - packages/*
+
+nodeLinker: hoisted
+
+allowBuilds:
+  esbuild: true
+
+minimumReleaseAgeExclude:
+  - expo-camera@57.0.3
+
+patchedDependencies:
+  expo-modules-autolinking@57.0.7: patches/expo-modules-autolinking@57.0.7.patch

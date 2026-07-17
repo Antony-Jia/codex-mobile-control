@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Codex Micro",
+    "slug": "codex-micro",
+    "version": "0.1.0",
+    "orientation": "landscape",
+    "scheme": "codexmicro",
+    "userInterfaceStyle": "dark",
+    "android": {
+      "package": "com.codexmicro.controller",
+      "permissions": ["CAMERA", "RECORD_AUDIO", "VIBRATE"],
+      "adaptiveIcon": { "backgroundColor": "#071018" }
+    },
+    "plugins": ["expo-router", "expo-secure-store", "expo-camera", "expo-sqlite", "expo-audio", "./plugins/withCleartextTraffic"],
+    "experiments": { "typedRoutes": true }
+  }
+}

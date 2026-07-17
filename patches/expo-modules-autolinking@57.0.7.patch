@@ -1,0 +1,14 @@
+diff --git a/android/expo-gradle-plugin/expo-autolinking-plugin-shared/src/main/kotlin/expo/modules/plugin/Os.kt b/android/expo-gradle-plugin/expo-autolinking-plugin-shared/src/main/kotlin/expo/modules/plugin/Os.kt
+index 12c7119c9bbcde01e2f78bea918d8d0d07569d85..40038d628c36b62418b1e87822b13e460cdef415 100644
+--- a/android/expo-gradle-plugin/expo-autolinking-plugin-shared/src/main/kotlin/expo/modules/plugin/Os.kt
++++ b/android/expo-gradle-plugin/expo-autolinking-plugin-shared/src/main/kotlin/expo/modules/plugin/Os.kt
+@@ -6,7 +6,8 @@ object Os {
+ 
+   fun windowsAwareCommandLine(args: List<String>): List<String> =
+     if (isWindows()) {
+-      listOf("cmd", "/c") + args
++      // Disable cmd.exe AutoRun hooks because their stdout can corrupt JSON.
++      listOf("cmd", "/d", "/c") + args
+     } else {
+       args
+     }

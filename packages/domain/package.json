@@ -1,0 +1,11 @@
+{
+  "name": "@codex-micro/domain",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": { ".": { "types": "./src/index.ts", "default": "./dist/index.js" } },
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "vitest run", "typecheck": "tsc -p tsconfig.json --noEmit" },
+  "dependencies": { "@codex-micro/protocol": "workspace:*" },
+  "devDependencies": { "typescript": "^5.9.3", "vitest": "^3.2.4" }
+}

@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.expo/
+.pnpm-store/
+.gradle-user/
+apps/companion/data/
+/data/
+apps/mobile/android/
+apps/mobile/ios/
+*.log
+.companion.pid
+.metro*.pid
+.gradle-*.pid
+.adb-install.pid
+codex-micro-device.png
+.env
+*.keystore
