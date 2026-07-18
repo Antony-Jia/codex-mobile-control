@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import * as Haptics from "expo-haptics";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { Effort, ModelOption } from "@codex-micro/protocol";
+import { useTheme, type Palette } from "../theme";
 
 type Props = {
   effort: Effort;
@@ -19,6 +21,8 @@ const effortLabels: Record<Effort, string> = { low: "低", medium: "中", high: 
 const tap = (action: () => void) => { void Haptics.selectionAsync(); action(); };
 
 export function ControlDeck(props: Props) {
+  const t = useTheme();
+  const styles = useMemo(() => createStyles(t), [t]);
   const selectedModel = props.models.find((item) => item.model === props.model);
   const efforts = selectedModel?.supportedEfforts.length ? selectedModel.supportedEfforts : allEfforts;
   const summary = `${props.planMode ? "先给方案" : "直接执行"} · ${selectedModel?.displayName ?? "读取模型中"} · ${effortLabels[props.effort]}`;
@@ -50,27 +54,27 @@ export function ControlDeck(props: Props) {
   </View>;
 }
 
-const styles = StyleSheet.create({
-  root: { marginTop: 10, borderRadius: 13, borderWidth: 1, borderColor: "#17313e", backgroundColor: "#09141a", overflow: "hidden" },
-  header: { minHeight: 58, paddingHorizontal: 13, paddingVertical: 10, flexDirection: "row", alignItems: "center" },
+const createStyles = (t: Palette) => StyleSheet.create({
+  root: { marginTop: 10, borderRadius: 16, borderWidth: 1, borderColor: t.border, backgroundColor: t.surface, overflow: "hidden" },
+  header: { minHeight: 58, paddingHorizontal: 14, paddingVertical: 11, flexDirection: "row", alignItems: "center" },
   headerText: { flex: 1, minWidth: 0 },
-  title: { color: "#d9edf5", fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
-  summary: { color: "#66808b", fontSize: 10, marginTop: 3 },
-  chevron: { color: "#61dfff", fontSize: 10, fontWeight: "800", marginLeft: 10 },
-  body: { borderTopWidth: 1, borderTopColor: "#142832", padding: 12 },
-  label: { color: "#6f8793", fontSize: 10, letterSpacing: 1.5, fontWeight: "800", marginBottom: 7 },
+  title: { color: t.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
+  summary: { color: t.textMuted, fontSize: 10, marginTop: 3 },
+  chevron: { color: t.accent, fontSize: 10, fontWeight: "800", marginLeft: 10 },
+  body: { borderTopWidth: 1, borderTopColor: t.divider, padding: 13 },
+  label: { color: t.textMuted, fontSize: 10, letterSpacing: 1.5, fontWeight: "800", marginBottom: 7 },
   segmentRow: { flexDirection: "row", gap: 7, marginBottom: 12 },
-  segment: { flex: 1, paddingVertical: 10, borderRadius: 9, borderWidth: 1, borderColor: "#203743", backgroundColor: "#101e25", alignItems: "center" },
-  segmentText: { color: "#8197a1", fontSize: 11, fontWeight: "700" },
-  active: { borderColor: "#42d8ff", backgroundColor: "#123746" },
-  activeText: { color: "#74e6ff", fontWeight: "900" },
+  segment: { flex: 1, paddingVertical: 11, borderRadius: 11, borderWidth: 1, borderColor: t.border, backgroundColor: t.surfaceAlt, alignItems: "center" },
+  segmentText: { color: t.textSecondary, fontSize: 11, fontWeight: "700" },
+  active: { borderColor: t.accentBorder, backgroundColor: t.accentBg },
+  activeText: { color: t.accent, fontWeight: "900" },
   modelRow: { gap: 7, paddingBottom: 12 },
-  modelChip: { minWidth: 112, maxWidth: 180, paddingVertical: 9, paddingHorizontal: 11, borderRadius: 9, borderWidth: 1, borderColor: "#203743", backgroundColor: "#101e25" },
-  modelText: { color: "#a5b7bf", fontSize: 11, fontWeight: "800" },
-  defaultText: { color: "#56808f", fontSize: 8, marginTop: 3 },
-  empty: { color: "#667d88", fontSize: 11, paddingVertical: 8 },
+  modelChip: { minWidth: 112, maxWidth: 180, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 11, borderWidth: 1, borderColor: t.border, backgroundColor: t.surfaceAlt },
+  modelText: { color: t.textSecondary, fontSize: 11, fontWeight: "800" },
+  defaultText: { color: t.textMuted, fontSize: 8, marginTop: 3 },
+  empty: { color: t.textMuted, fontSize: 11, paddingVertical: 8 },
   reasonHeader: { flexDirection: "row", justifyContent: "space-between" },
-  modelHint: { color: "#526c77", fontSize: 9, maxWidth: "55%" },
+  modelHint: { color: t.textFaint, fontSize: 9, maxWidth: "55%" },
   effortRow: { flexDirection: "row", gap: 7 },
-  effortChip: { flex: 1, paddingVertical: 10, borderRadius: 9, borderWidth: 1, borderColor: "#203743", backgroundColor: "#101e25", alignItems: "center" },
+  effortChip: { flex: 1, paddingVertical: 11, borderRadius: 11, borderWidth: 1, borderColor: t.border, backgroundColor: t.surfaceAlt, alignItems: "center" },
 });

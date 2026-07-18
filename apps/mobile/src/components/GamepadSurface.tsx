@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import type { AgentSlot, Effort, ModelOption } from "@codex-micro/protocol";
+import { useTheme, type Palette } from "../theme";
 
 type Props = {
   slots: AgentSlot[];
@@ -64,6 +65,8 @@ function RotaryDial({
   size: number;
   onStep: (delta: number) => void;
 }) {
+  const t = useTheme();
+  const styles = useMemo(() => createStyles(t), [t]);
   const rotation = useRef(new Animated.Value(0)).current;
   const stepRef = useRef(onStep);
   const lastStep = useRef(0);
@@ -105,6 +108,8 @@ function RotaryDial({
 }
 
 function EffortSlider({ effort, onEffort }: { effort: Effort; onEffort: (value: Effort) => void }) {
+  const t = useTheme();
+  const styles = useMemo(() => createStyles(t), [t]);
   const effortIndex = Math.max(0, efforts.findIndex((item) => item.value === effort));
   const indexRef = useRef(effortIndex);
   const onEffortRef = useRef(onEffort);
@@ -192,6 +197,8 @@ export function GamepadSurface({
   threadId, turnId, sending, commandError, onSelectSlot, onEffort, onModel, onPlanMode, onDraft,
   onSend, onStop, onTab, onOpenSessions, onCreate, onClearError, onToggleMode,
 }: Props) {
+  const t = useTheme();
+  const styles = useMemo(() => createStyles(t), [t]);
   const { height } = useWindowDimensions();
   const compact = height < 560;
   const dialSize = Math.max(108, Math.min(compact ? 132 : 154, height * 0.29));
@@ -258,7 +265,7 @@ export function GamepadSurface({
                 <Pressable onPress={() => selectOutputMode("diff")}><Text style={[styles.tab, outputMode === "diff" && styles.tabActive]}>变更</Text></Pressable>
                 <Pressable onPress={() => selectOutputMode("history")}><Text style={[styles.tab, outputMode === "history" && styles.tabActive]}>历史信息</Text></Pressable>
               </View>}
-              {openingSlotId && <ActivityIndicator style={styles.opening} size="small" color="#47dfff" />}
+              {openingSlotId && <ActivityIndicator style={styles.opening} size="small" color={t.accent} />}
             </View>
             {panelMode === "input" ? <View style={styles.inputPane}>
               <TextInput value={draft} onChangeText={onDraft} multiline editable={Boolean(threadId) && !sending} style={styles.input} />
@@ -267,7 +274,7 @@ export function GamepadSurface({
                 <Pressable disabled={!threadId || !draft.trim() || sending} style={[styles.send, (!threadId || !draft.trim() || sending) && styles.disabled]} onPress={onSend}><Text style={styles.actionText}>↵</Text></Pressable>
               </View>
             </View> : outputMode === "history" && historyLoading ? <View style={styles.historyLoading}>
-              <ActivityIndicator color="#50dfff" />
+              <ActivityIndicator color={t.accent} />
               <Text style={styles.historyLoadingTitle}>正在检查历史信息…</Text>
               <Text style={styles.historyLoadingHint}>从 Codex 读取该对话的最后一段记录</Text>
             </View> : <ScrollView nestedScrollEnabled style={styles.output} contentContainerStyle={styles.outputContent}>
@@ -295,62 +302,62 @@ export function GamepadSurface({
   </View>;
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#04090d", padding: 8 },
-  shell: { flex: 1, minHeight: 0, borderRadius: 22, borderWidth: 1, borderColor: "#174a5a", backgroundColor: "#06131b", padding: 12, overflow: "hidden" },
+const createStyles = (t: Palette) => StyleSheet.create({
+  page: { flex: 1, backgroundColor: t.appBg, padding: 8 },
+  shell: { flex: 1, minHeight: 0, borderRadius: 22, borderWidth: 1, borderColor: t.borderStrong, backgroundColor: t.surface, padding: 12, overflow: "hidden" },
   shellCompact: { padding: 9, borderRadius: 18 },
   header: { height: 30, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 4 },
   logo: { minWidth: 220 },
-  logoText: { color: "#dbf8ff", fontWeight: "900", fontSize: 15, letterSpacing: 3 },
-  createButton: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: "#0c3341", borderWidth: 1, borderColor: "#2abbd8" },
-  createButtonText: { color: "#9cefff", fontSize: 20, lineHeight: 22, fontWeight: "500" },
+  logoText: { color: t.textPrimary, fontWeight: "900", fontSize: 15, letterSpacing: 3, textShadowColor: t.glow, textShadowRadius: t.mode === "dark" ? 10 : 0, textShadowOffset: { width: 0, height: 0 } },
+  createButton: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: t.accentBg, borderWidth: 1, borderColor: t.accentBorder },
+  createButtonText: { color: t.accent, fontSize: 20, lineHeight: 22, fontWeight: "500" },
   deck: { flex: 1, minHeight: 0, flexDirection: "row", gap: 10 },
   sideRail: { width: 146, minHeight: 0, alignItems: "center", justifyContent: "space-between" },
   dialStack: { alignSelf: "stretch", alignItems: "center", marginTop: 48 },
   dialGroup: { alignItems: "center" },
-  dialOuter: { borderWidth: 2, borderColor: "#2ac7e9", backgroundColor: "#071c26", alignItems: "center", justifyContent: "center", shadowColor: "#20cbed", shadowOpacity: 0.24, shadowRadius: 10, elevation: 3 },
-  dialFace: { position: "absolute", borderWidth: 1, borderColor: "#17637a", backgroundColor: "#0b2d3b", alignItems: "center" },
-  dialPointer: { position: "absolute", top: 8, width: 4, height: 22, borderRadius: 2, backgroundColor: "#69e9ff" },
-  dialHub: { position: "absolute", top: "50%", marginTop: -6, width: 12, height: 12, borderRadius: 6, backgroundColor: "#174d5d", borderWidth: 2, borderColor: "#3ccce8" },
+  dialOuter: { borderWidth: 2, borderColor: t.accentBorder, backgroundColor: t.surfaceAlt, alignItems: "center", justifyContent: "center", shadowColor: t.glow, shadowOpacity: t.mode === "dark" ? 0.3 : 0.15, shadowRadius: 10, elevation: 3 },
+  dialFace: { position: "absolute", borderWidth: 1, borderColor: t.borderStrong, backgroundColor: t.accentBg, alignItems: "center" },
+  dialPointer: { position: "absolute", top: 8, width: 4, height: 22, borderRadius: 2, backgroundColor: t.accent },
+  dialHub: { position: "absolute", top: "50%", marginTop: -6, width: 12, height: 12, borderRadius: 6, backgroundColor: t.surfaceAlt, borderWidth: 2, borderColor: t.accentBorder },
   dialCopy: { position: "absolute", left: 17, right: 17, top: 38, bottom: 24, alignItems: "center", justifyContent: "center" },
-  dialValue: { color: "#b8e6ef", fontSize: 11, lineHeight: 15, fontWeight: "800", textAlign: "center" },
-  runStatus: { alignSelf: "stretch", marginTop: 7, paddingHorizontal: 4, color: "#6f9eaa", fontSize: 9, lineHeight: 12, fontWeight: "800", textAlign: "center" },
+  dialValue: { color: t.textPrimary, fontSize: 11, lineHeight: 15, fontWeight: "800", textAlign: "center" },
+  runStatus: { alignSelf: "stretch", marginTop: 7, paddingHorizontal: 4, color: t.textSecondary, fontSize: 9, lineHeight: 12, fontWeight: "800", textAlign: "center" },
   sideActions: { alignSelf: "stretch", gap: 7, flexShrink: 1, flexDirection: "row", justifyContent: "center" },
-  iconButton: { width: 46, height: 38, borderRadius: 12, backgroundColor: "#0d2d3a", borderWidth: 1, borderColor: "#1a5364", alignItems: "center", justifyContent: "center" },
-  iconButtonText: { color: "#9cefff", fontSize: 26, lineHeight: 28, fontWeight: "500" },
-  sideButton: { minHeight: 36, flexGrow: 1, maxHeight: 52, borderRadius: 12, backgroundColor: "#0d2d3a", borderWidth: 1, borderColor: "#1a5364", alignItems: "center", justifyContent: "center", paddingHorizontal: 6 },
-  sideButtonActive: { backgroundColor: "#087c9c", borderColor: "#55def7" },
-  sideButtonText: { color: "#d5f7ff", fontSize: 10, lineHeight: 14, textAlign: "center", fontWeight: "800" },
+  iconButton: { width: 46, height: 38, borderRadius: 12, backgroundColor: t.surfaceAlt, borderWidth: 1, borderColor: t.borderStrong, alignItems: "center", justifyContent: "center" },
+  iconButtonText: { color: t.accent, fontSize: 26, lineHeight: 28, fontWeight: "500" },
+  sideButton: { minHeight: 36, flexGrow: 1, maxHeight: 52, borderRadius: 12, backgroundColor: t.surfaceAlt, borderWidth: 1, borderColor: t.borderStrong, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 },
+  sideButtonActive: { backgroundColor: t.primary, borderColor: t.primaryBorder },
+  sideButtonText: { color: t.textPrimary, fontSize: 10, lineHeight: 14, textAlign: "center", fontWeight: "800" },
   workspace: { flex: 1, minWidth: 0, minHeight: 0, gap: 8 },
-  effortCard: { height: 42, borderRadius: 12, borderWidth: 1, borderColor: "#1b5364", backgroundColor: "#081e28", paddingHorizontal: 12, paddingVertical: 5 },
+  effortCard: { height: 42, borderRadius: 12, borderWidth: 1, borderColor: t.borderStrong, backgroundColor: t.surfaceAlt, paddingHorizontal: 12, paddingVertical: 5 },
   effortTrack: { flex: 1, justifyContent: "center" },
   effortRail: { position: "absolute", left: 9, right: 9, height: 8, borderRadius: 4, overflow: "hidden", flexDirection: "row" },
   effortSegment: { flex: 1 },
-  effortNode: { position: "absolute", marginLeft: -4, width: 8, height: 8, borderRadius: 4, backgroundColor: "#d9eef2", borderWidth: 1, borderColor: "#07151c" },
-  effortThumb: { position: "absolute", width: 18, height: 18, borderRadius: 9, backgroundColor: "#f2fbfd", borderWidth: 3, borderColor: "#174c5c", shadowColor: "#ffffff", shadowOpacity: 0.55, shadowRadius: 4 },
+  effortNode: { position: "absolute", marginLeft: -4, width: 8, height: 8, borderRadius: 4, backgroundColor: "#f4fbfd", borderWidth: 1, borderColor: "rgba(0,0,0,0.35)" },
+  effortThumb: { position: "absolute", width: 18, height: 18, borderRadius: 9, backgroundColor: "#ffffff", borderWidth: 3, borderColor: t.accentBorder, shadowColor: t.glow, shadowOpacity: 0.6, shadowRadius: 5, elevation: 3 },
   effortLabels: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   effortLabelHit: { width: "25%", height: "100%", alignItems: "center", justifyContent: "center" },
-  unifiedPanel: { flex: 1, minHeight: 0, borderRadius: 15, borderWidth: 1, borderColor: "#194b5c", backgroundColor: "#06141c", overflow: "hidden" },
-  panelTabs: { height: 40, flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: "#143542" },
-  mainTab: { color: "#67828c", fontSize: 12, fontWeight: "900" },
-  secondaryTabs: { flexDirection: "row", alignItems: "center", gap: 14, marginLeft: 10, paddingLeft: 16, borderLeftWidth: 1, borderLeftColor: "#204451" },
+  unifiedPanel: { flex: 1, minHeight: 0, borderRadius: 15, borderWidth: 1, borderColor: t.border, backgroundColor: t.surfaceAlt, overflow: "hidden" },
+  panelTabs: { height: 40, flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: t.divider },
+  mainTab: { color: t.textMuted, fontSize: 12, fontWeight: "900" },
+  secondaryTabs: { flexDirection: "row", alignItems: "center", gap: 14, marginLeft: 10, paddingLeft: 16, borderLeftWidth: 1, borderLeftColor: t.divider },
   opening: { marginLeft: "auto" },
   inputPane: { flex: 1, minHeight: 0, padding: 10 },
-  input: { flex: 1, minHeight: 40, color: "#effcff", fontSize: 13, lineHeight: 18, textAlignVertical: "top", padding: 0 },
+  input: { flex: 1, minHeight: 40, color: t.textPrimary, fontSize: 13, lineHeight: 18, textAlignVertical: "top", padding: 0 },
   inputActions: { flexDirection: "row", justifyContent: "flex-end", gap: 7 },
-  send: { backgroundColor: "#087f9f", width: 48, alignItems: "center", paddingVertical: 8, borderRadius: 9 },
-  stop: { backgroundColor: "#8a2938", width: 48, alignItems: "center", paddingVertical: 8, borderRadius: 9 },
+  send: { backgroundColor: t.primary, width: 48, alignItems: "center", paddingVertical: 8, borderRadius: 9 },
+  stop: { backgroundColor: t.declineBtn, width: 48, alignItems: "center", paddingVertical: 8, borderRadius: 9 },
   disabled: { opacity: 0.35 },
-  actionText: { color: "white", fontSize: 10, fontWeight: "900" },
-  tab: { color: "#67828c", fontSize: 10, fontWeight: "800" },
-  tabActive: { color: "#50e2ff" },
+  actionText: { color: "#ffffff", fontSize: 10, fontWeight: "900" },
+  tab: { color: t.textMuted, fontSize: 10, fontWeight: "800" },
+  tabActive: { color: t.accent },
   output: { flex: 1 },
   outputContent: { padding: 10 },
-  mono: { color: "#bad0d8", fontFamily: "monospace", fontSize: 10, lineHeight: 15 },
+  mono: { color: t.textSecondary, fontFamily: "monospace", fontSize: 10, lineHeight: 15 },
   historyLoading: { flex: 1, alignItems: "center", justifyContent: "center", gap: 7 },
-  historyLoadingTitle: { color: "#bdebf5", fontSize: 11, fontWeight: "900" },
-  historyLoadingHint: { color: "#63828e", fontSize: 8 },
-  emptyHistory: { color: "#68838d", textAlign: "center", marginTop: 28 },
-  errorBox: { position: "absolute", left: 170, right: 170, bottom: 10, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 9, borderWidth: 1, borderColor: "#98394a", backgroundColor: "#32131b" },
-  errorText: { color: "#ffc0c9", fontSize: 8 },
+  historyLoadingTitle: { color: t.textPrimary, fontSize: 11, fontWeight: "900" },
+  historyLoadingHint: { color: t.textMuted, fontSize: 8 },
+  emptyHistory: { color: t.textMuted, textAlign: "center", marginTop: 28 },
+  errorBox: { position: "absolute", left: 170, right: 170, bottom: 10, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 9, borderWidth: 1, borderColor: t.errorBorder, backgroundColor: t.errorBg },
+  errorText: { color: t.errorText, fontSize: 8 },
 });

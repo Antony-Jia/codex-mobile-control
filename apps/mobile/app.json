@@ -5,7 +5,7 @@
     "version": "0.1.0",
     "orientation": "landscape",
     "scheme": "codexmicro",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "android": {
       "package": "com.codexmicro.controller",
       "permissions": ["CAMERA", "RECORD_AUDIO", "VIBRATE"],

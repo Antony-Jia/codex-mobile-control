@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import * as Haptics from "expo-haptics";
 import * as ScreenOrientation from "expo-screen-orientation";
+import { useTheme, type Palette } from "../src/theme";
 import { PairingScreen } from "../src/components/PairingScreen";
 import { SlotGrid } from "../src/components/SlotGrid";
 import { ControlDeck } from "../src/components/ControlDeck";
@@ -16,6 +17,8 @@ const effortLabels = { low: "低", medium: "中", high: "高", xhigh: "极高" }
 
 export default function Home() {
   const store = useController();
+  const t = useTheme();
+  const styles = useMemo(() => createStyles(t), [t]);
   const [draft, setDraft] = useState("");
   const [tab, setTab] = useState<"output" | "diff" | "history">("output");
   const [planMode, setPlanMode] = useState(false);
@@ -97,14 +100,14 @@ export default function Home() {
     } catch (error) { Alert.alert("发送失败", String(error)); }
   };
 
-  const statusColor = store.status === "connected" && store.state.codexHealth === "ready" ? "#24d17e" : store.status === "error" || store.state.codexHealth === "error" ? "#ff4057" : "#ffb020";
+  const statusColor = store.status === "connected" && store.state.codexHealth === "ready" ? t.success : store.status === "error" || store.state.codexHealth === "error" ? t.danger : t.warning;
   const statusText = store.status === "connected" ? `CONNECTED · CODEX ${store.state.codexHealth.toUpperCase()}` : store.status.toUpperCase();
 
   if (store.status === "loading") return <View style={styles.loading}><Text style={styles.muted}>Loading…</Text></View>;
   if (!store.connection) return <PairingScreen />;
 
   return <SafeAreaView style={styles.root}>
-    <StatusBar style="light" />
+    <StatusBar style={t.statusBar} />
     {!gamepadMode && <View style={styles.header}>
       <Pressable accessibilityLabel={gamepadMode ? "切换到控制台模式" : "切换到游戏手柄模式"} onPress={() => { void Haptics.selectionAsync(); setGamepadMode((value) => !value); }}><Text style={styles.brand}>CODEX MICRO</Text><Text style={styles.subtitle}>{gamepadMode ? "GAMEPAD CONTROL SURFACE" : "ANDROID CONTROL SURFACE"}</Text></Pressable>
       <Pressable onLongPress={() => void store.disconnect()}><Text style={[styles.status, { color: statusColor }]}>● {statusText}</Text></Pressable>
@@ -125,7 +128,7 @@ export default function Home() {
           <View style={styles.composerTarget}><Text numberOfLines={1} style={styles.composerTitle}>{selected?.threadId ? `追加到：${selected.title ?? `会话 ${selected.slotId}`}` : "尚未选择 Codex 会话"}</Text>{turnId ? <Text style={styles.running}>运行中，可继续调整</Text> : output ? <Text style={styles.persisted}>✓ 已写入 Codex</Text> : null}</View>
           <View style={styles.configPill}><Text style={styles.configPillLabel}>下次发送</Text><Text numberOfLines={1} style={styles.configPillValue}>{runConfig}</Text></View>
         </View>
-        <TextInput value={draft} onChangeText={setDraft} multiline placeholder={threadId ? (planMode ? "描述目标，Codex 会先制定方案…" : "输入消息，将追加到这个 Codex 会话…") : "请先选择或新建 Codex 会话"} placeholderTextColor="#58707b" style={styles.input} editable={Boolean(threadId) && !sending} />
+        <TextInput value={draft} onChangeText={setDraft} multiline placeholder={threadId ? (planMode ? "描述目标，Codex 会先制定方案…" : "输入消息，将追加到这个 Codex 会话…") : "请先选择或新建 Codex 会话"} placeholderTextColor={t.textMuted} style={styles.input} editable={Boolean(threadId) && !sending} />
         <View style={styles.composerButtons}>
           {turnId && <Pressable style={styles.stop} onPress={() => store.send({ type: "turn.interrupt", requestId: commandId(), threadId: threadId!, turnId })}><Text style={styles.actionText}>停止</Text></Pressable>}
           <Pressable disabled={!threadId || !draft.trim() || sending} style={[styles.send, (!threadId || !draft.trim() || sending) && styles.disabled]} onPress={send}><Text style={styles.actionText}>{sending ? "发送中…" : turnId ? "调整任务" : planMode ? "获取方案" : "发送"}</Text></Pressable>
@@ -143,7 +146,7 @@ export default function Home() {
 
       <View style={styles.console}>
         <View style={styles.tabs}><Pressable onPress={() => setTab("output")}><Text style={[styles.tab, tab === "output" && styles.tabActive]}>输出</Text></Pressable><Pressable onPress={() => setTab("diff")}><Text style={[styles.tab, tab === "diff" && styles.tabActive]}>变更</Text></Pressable><Pressable onPress={() => setTab("history")}><Text style={[styles.tab, tab === "history" && styles.tabActive]}>历史信息</Text></Pressable><Text style={styles.turn}>{!threadId ? "未选择会话" : turnId ? "运行中" : "空闲"}</Text></View>
-        {tab === "history" && historyLoading ? <View style={styles.historyLoading}><ActivityIndicator color="#50dfff" /><Text style={styles.historyLoadingTitle}>正在检查历史信息…</Text><Text style={styles.historyLoadingHint}>从 Codex 读取该对话的最后一段记录</Text></View> : <ScrollView style={styles.output} nestedScrollEnabled><Text selectable style={[styles.mono, tab === "history" && !historyOutput && styles.emptyHistory]}>{tab === "output" ? output || "暂无输出。" : tab === "diff" ? diff || "暂无代码变更。" : historyOutput || "历史信息已加载，但该对话没有可显示的用户/助手消息。"}</Text></ScrollView>}
+        {tab === "history" && historyLoading ? <View style={styles.historyLoading}><ActivityIndicator color={t.accent} /><Text style={styles.historyLoadingTitle}>正在检查历史信息…</Text><Text style={styles.historyLoadingHint}>从 Codex 读取该对话的最后一段记录</Text></View> : <ScrollView style={styles.output} nestedScrollEnabled><Text selectable style={[styles.mono, tab === "history" && !historyOutput && styles.emptyHistory]}>{tab === "output" ? output || "暂无输出。" : tab === "diff" ? diff || "暂无代码变更。" : historyOutput || "历史信息已加载，但该对话没有可显示的用户/助手消息。"}</Text></ScrollView>}
       </View>
 
       <View style={styles.footer}><Pressable onPress={() => threadId && store.send({ type: "thread.fork", requestId: commandId(), threadId })}><Text style={styles.footerButton}>复制会话</Text></Pressable><Pressable onPress={() => selected && selectAndOpen(selected.slotId)}><Text style={styles.footerButton}>桌面打开</Text></Pressable><Pressable onPress={() => { store.send({ type: "thread.list", requestId: commandId() }); store.send({ type: "model.list", requestId: commandId() }); }}><Text style={styles.footerButton}>刷新</Text></Pressable></View>
@@ -153,52 +156,52 @@ export default function Home() {
   </SafeAreaView>;
 }
 
-const styles = StyleSheet.create({
-  loading: { flex: 1, backgroundColor: "#050a0e", alignItems: "center", justifyContent: "center" },
-  root: { flex: 1, backgroundColor: "#050a0e" },
-  header: { paddingHorizontal: 18, paddingVertical: 11, borderBottomColor: "#142832", borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  brand: { color: "#dbf8ff", fontWeight: "900", fontSize: 18, letterSpacing: 2 },
-  subtitle: { color: "#4d6672", fontSize: 8, letterSpacing: 2 },
-  status: { fontSize: 8, fontWeight: "800", maxWidth: 170, textAlign: "right" },
+const createStyles = (t: Palette) => StyleSheet.create({
+  loading: { flex: 1, backgroundColor: t.appBg, alignItems: "center", justifyContent: "center" },
+  root: { flex: 1, backgroundColor: t.appBg },
+  header: { paddingHorizontal: 18, paddingVertical: 12, borderBottomColor: t.divider, borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: t.surfaceAlt },
+  brand: { color: t.textPrimary, fontWeight: "900", fontSize: 18, letterSpacing: 2.5, textShadowColor: t.glow, textShadowRadius: t.mode === "dark" ? 10 : 0, textShadowOffset: { width: 0, height: 0 } },
+  subtitle: { color: t.textFaint, fontSize: 8, letterSpacing: 2.5, marginTop: 2 },
+  status: { fontSize: 8, fontWeight: "800", maxWidth: 170, textAlign: "right", letterSpacing: 0.5 },
   content: { padding: 14, maxWidth: 900, alignSelf: "center", width: "100%", paddingBottom: 30 },
-  composer: { marginTop: 10, backgroundColor: "#0a141a", borderRadius: 14, borderWidth: 1, borderColor: "#17313e", padding: 10 },
-  composerHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 5 },
+  composer: { marginTop: 10, backgroundColor: t.surface, borderRadius: 16, borderWidth: 1, borderColor: t.border, padding: 12 },
+  composerHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 6 },
   composerTarget: { flex: 1, minWidth: 0 },
-  composerTitle: { color: "#7c98a4", fontSize: 10, fontWeight: "800" },
-  running: { color: "#48aee9", fontSize: 8, marginTop: 3 },
-  persisted: { color: "#36d991", fontSize: 8, fontWeight: "800", marginTop: 3 },
-  configPill: { maxWidth: "62%", flexDirection: "row", alignItems: "center", borderRadius: 10, borderWidth: 1, borderColor: "#1e5264", backgroundColor: "#0c2631", paddingHorizontal: 8, paddingVertical: 4 },
-  configPillLabel: { color: "#5f8796", fontSize: 8, marginRight: 5 },
-  configPillValue: { color: "#67ddfa", fontSize: 9, fontWeight: "900", flexShrink: 1 },
-  input: { minHeight: 72, color: "white", textAlignVertical: "top", fontSize: 13 },
+  composerTitle: { color: t.textSecondary, fontSize: 10, fontWeight: "800" },
+  running: { color: t.running, fontSize: 8, marginTop: 3 },
+  persisted: { color: t.success, fontSize: 8, fontWeight: "800", marginTop: 3 },
+  configPill: { maxWidth: "62%", flexDirection: "row", alignItems: "center", borderRadius: 11, borderWidth: 1, borderColor: t.borderStrong, backgroundColor: t.accentBg, paddingHorizontal: 9, paddingVertical: 5 },
+  configPillLabel: { color: t.textMuted, fontSize: 8, marginRight: 5 },
+  configPillValue: { color: t.accent, fontSize: 9, fontWeight: "900", flexShrink: 1 },
+  input: { minHeight: 72, color: t.textPrimary, textAlignVertical: "top", fontSize: 13 },
   composerButtons: { flexDirection: "row", justifyContent: "flex-end", gap: 8 },
-  send: { backgroundColor: "#087d9d", minWidth: 90, alignItems: "center", paddingHorizontal: 22, paddingVertical: 10, borderRadius: 9 },
+  send: { backgroundColor: t.primary, minWidth: 90, alignItems: "center", paddingHorizontal: 22, paddingVertical: 11, borderRadius: 11, shadowColor: t.glow, shadowOpacity: t.mode === "dark" ? 0.5 : 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 4 },
   disabled: { opacity: 0.35 },
-  stop: { backgroundColor: "#8a2938", paddingHorizontal: 18, paddingVertical: 10, borderRadius: 9 },
-  actionText: { color: "white", fontWeight: "900", fontSize: 11 },
-  errorBox: { marginTop: 10, padding: 11, borderRadius: 11, borderWidth: 1, borderColor: "#98394a", backgroundColor: "#271017" },
-  errorTitle: { color: "#ff7386", fontWeight: "900", fontSize: 11 },
-  errorText: { color: "#ffc0c9", fontSize: 10, marginTop: 4 },
-  errorHint: { color: "#925764", fontSize: 8, marginTop: 5 },
-  console: { marginTop: 10, borderRadius: 14, backgroundColor: "#071018", borderWidth: 1, borderColor: "#16303d", overflow: "hidden" },
-  tabs: { flexDirection: "row", gap: 20, padding: 12, borderBottomWidth: 1, borderBottomColor: "#142832" },
-  tab: { color: "#5d7480", fontSize: 11, fontWeight: "800" },
-  tabActive: { color: "#58ddff" },
-  turn: { color: "#607783", fontSize: 10, marginLeft: "auto" },
-  output: { height: 230, padding: 12 },
-  mono: { color: "#b8ccd5", fontFamily: "monospace", fontSize: 12, lineHeight: 18 },
+  stop: { backgroundColor: t.declineBtn, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 11 },
+  actionText: { color: "#ffffff", fontWeight: "900", fontSize: 11 },
+  errorBox: { marginTop: 10, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: t.errorBorder, backgroundColor: t.errorBg },
+  errorTitle: { color: t.errorTitle, fontWeight: "900", fontSize: 11 },
+  errorText: { color: t.errorText, fontSize: 10, marginTop: 4 },
+  errorHint: { color: t.errorHint, fontSize: 8, marginTop: 5 },
+  console: { marginTop: 10, borderRadius: 16, backgroundColor: t.surfaceAlt, borderWidth: 1, borderColor: t.border, overflow: "hidden" },
+  tabs: { flexDirection: "row", gap: 20, padding: 13, borderBottomWidth: 1, borderBottomColor: t.divider },
+  tab: { color: t.textMuted, fontSize: 11, fontWeight: "800" },
+  tabActive: { color: t.accent },
+  turn: { color: t.textMuted, fontSize: 10, marginLeft: "auto" },
+  output: { height: 230, padding: 13 },
+  mono: { color: t.textSecondary, fontFamily: "monospace", fontSize: 12, lineHeight: 18 },
   historyLoading: { height: 230, alignItems: "center", justifyContent: "center", gap: 7 },
-  historyLoadingTitle: { color: "#bdebf5", fontSize: 11, fontWeight: "900" },
-  historyLoadingHint: { color: "#63828e", fontSize: 8 },
-  emptyHistory: { color: "#68838d", textAlign: "center", marginTop: 28 },
-  approval: { marginTop: 10, padding: 14, backgroundColor: "#251d0b", borderColor: "#9b6813", borderWidth: 1, borderRadius: 14 },
-  approvalTitle: { color: "#ffbd45", fontWeight: "900", letterSpacing: 1 },
-  approvalBody: { color: "#ffe7bd", fontFamily: "monospace", marginTop: 8 },
-  approvalReason: { color: "#a98a55", marginTop: 6 },
+  historyLoadingTitle: { color: t.textPrimary, fontSize: 11, fontWeight: "900" },
+  historyLoadingHint: { color: t.textMuted, fontSize: 8 },
+  emptyHistory: { color: t.textMuted, textAlign: "center", marginTop: 28 },
+  approval: { marginTop: 10, padding: 14, backgroundColor: t.approvalBg, borderColor: t.approvalBorder, borderWidth: 1, borderRadius: 16 },
+  approvalTitle: { color: t.approvalTitle, fontWeight: "900", letterSpacing: 1 },
+  approvalBody: { color: t.approvalBody, fontFamily: "monospace", marginTop: 8 },
+  approvalReason: { color: t.approvalReason, marginTop: 6 },
   actions: { flexDirection: "row", gap: 10, marginTop: 12 },
-  approve: { flex: 1, padding: 12, borderRadius: 9, backgroundColor: "#16784c", alignItems: "center" },
-  decline: { flex: 1, padding: 12, borderRadius: 9, backgroundColor: "#8a2938", alignItems: "center" },
-  footer: { flexDirection: "row", justifyContent: "space-around", marginTop: 14 },
-  footerButton: { color: "#5faec2", fontSize: 11, fontWeight: "800" },
-  muted: { color: "#708995" },
+  approve: { flex: 1, padding: 12, borderRadius: 11, backgroundColor: t.approveBtn, alignItems: "center" },
+  decline: { flex: 1, padding: 12, borderRadius: 11, backgroundColor: t.declineBtn, alignItems: "center" },
+  footer: { flexDirection: "row", justifyContent: "space-around", marginTop: 16 },
+  footerButton: { color: t.accentDim, fontSize: 11, fontWeight: "800" },
+  muted: { color: t.textMuted },
 });
