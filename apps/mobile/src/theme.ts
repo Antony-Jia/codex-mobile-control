@@ -19,6 +19,7 @@ export type Palette = {
   border: string;
   borderStrong: string;
   divider: string;
+  gridline: string; // faint tech grid / scanline tint
 
   // Accent (cyan)
   accent: string;
@@ -26,6 +27,9 @@ export type Palette = {
   accentBg: string;
   accentBorder: string;
   glow: string;
+  glowStrong: string; // brighter neon for HUD highlights
+  hudCyan: string; // electric cyan for tech accents
+  hudAmber: string; // terminal amber for secondary tech accents
 
   // Actions
   primary: string;
@@ -79,12 +83,16 @@ export const dark: Palette = {
   border: "#153040",
   borderStrong: "#1d4152",
   divider: "#122a36",
+  gridline: "rgba(95, 224, 255, 0.06)",
 
   accent: "#5fe0ff",
   accentDim: "#5f97a8",
   accentBg: "#0e2f3d",
   accentBorder: "#3ccdec",
   glow: "#25c9ec",
+  glowStrong: "#7df2ff",
+  hudCyan: "#5fe0ff",
+  hudAmber: "#ffb020",
 
   primary: "#0a86a8",
   primaryBorder: "#3fc5e0",
@@ -140,12 +148,16 @@ export const light: Palette = {
   border: "#d6e2e8",
   borderStrong: "#a7d6e4",
   divider: "#e3ecf0",
+  gridline: "rgba(10, 143, 181, 0.06)",
 
   accent: "#0a8fb5",
   accentDim: "#4b7480",
   accentBg: "#dbf3fa",
   accentBorder: "#2bb6d4",
   glow: "#4fc9e4",
+  glowStrong: "#0a8fb5",
+  hudCyan: "#0a8fb5",
+  hudAmber: "#c9820a",
 
   primary: "#0a86a8",
   primaryBorder: "#2bb6d4",
