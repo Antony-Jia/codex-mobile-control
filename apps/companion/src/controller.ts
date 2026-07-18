@@ -1,11 +1,24 @@
 import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
-import type { AgentSlot, ClientCommand, ControllerSnapshot, Effort, EventEnvelope, ModelOption, ServerEvent } from "@codex-micro/protocol";
+import path from "node:path";
+import type { AgentSlot, ClientCommand, ControllerSnapshot, Effort, EventEnvelope, ModelOption, PermissionMode, ServerEvent } from "@codex-micro/protocol";
 import { PROTOCOL_VERSION } from "@codex-micro/protocol";
 import { assignSlot, createSnapshot, reduceController, selectSlot, syncSlot } from "@codex-micro/domain";
 import type { CodexClient } from "./codex-client.js";
 import type { Storage } from "./storage.js";
 import { isApprovalMethod, normalizeApproval, normalizeLatestThreadHistory, normalizeNotification, normalizeThreads } from "./normalizer.js";
+
+const permissionSettings = (mode: PermissionMode | undefined, cwd: string) => {
+  const sandboxPolicy = mode === "full"
+    ? { type: "dangerFullAccess" as const }
+    : { type: "workspaceWrite" as const, writableRoots: [path.resolve(cwd)], networkAccess: false, excludeTmpdirEnvVar: false, excludeSlashTmp: false };
+  return {
+    approvalPolicy: mode === "full" ? "never" as const : "on-request" as const,
+    approvalsReviewer: mode === "auto" ? "auto_review" as const : "user" as const,
+    sandbox: mode === "full" ? "danger-full-access" as const : "workspace-write" as const,
+    sandboxPolicy,
+  };
+};
 
 export class Controller extends EventEmitter {
   readonly epoch = randomUUID();
@@ -22,14 +35,23 @@ export class Controller extends EventEmitter {
       const selected = this.state.slots.filter((slot) => slot.selected).sort((a, b) => b.updatedAt - a.updatedAt)[0];
       this.state = selectSlot(this.state, selected?.slotId ?? null);
     }
-    this.state.approvals = storage.loadApprovals();
+    // Server-initiated approval request IDs only belong to the current
+    // app-server transport. They cannot be resumed after either process
+    // restarts, even though mobile clients may reconnect to this controller.
+    storage.clearApprovals();
     codex.on("ready", () => { this.loadedThreads.clear(); this.publish({ type: "connection.health", codex: "ready" }); void Promise.all([this.refreshThreads(), this.refreshModels()]); });
-    codex.on("exit", () => this.publish({ type: "connection.health", codex: "restarting" }));
+    codex.on("exit", () => {
+      this.clearApprovals();
+      this.publish({ type: "connection.health", codex: "restarting" });
+    });
     codex.on("notification", (message) => {
       const event = normalizeNotification(message);
       if (!event) return;
       this.publish(event);
-      if (event.type === "turn.completed") { void this.refreshThreads(); void this.refreshThreadHistory(event.threadId); }
+      if (event.type === "turn.completed") {
+        this.clearApprovals((approval) => approval.threadId === event.threadId && (!event.turnId || !approval.turnId || approval.turnId === event.turnId));
+        void this.refreshThreads(); void this.refreshThreadHistory(event.threadId);
+      }
     });
     codex.on("serverRequest", (message) => {
       if (!isApprovalMethod(message.method)) { codex.respond(message.id, { decision: "decline" }); return; }
@@ -121,7 +143,9 @@ export class Controller extends EventEmitter {
       case "thread.history": return this.refreshThreadHistory(command.threadId);
       case "model.list": return this.refreshModels();
       case "thread.create": {
-        const result = await this.codex.request("thread/start", { cwd: command.cwd?.trim() || this.defaultCwd, approvalPolicy: "on-request", sandbox: "workspace-write" }) as any;
+        const cwd = command.cwd?.trim() || this.defaultCwd;
+        const permissions = permissionSettings(command.permissionMode, cwd);
+        const result = await this.codex.request("thread/start", { cwd, approvalPolicy: permissions.approvalPolicy, approvalsReviewer: permissions.approvalsReviewer, sandbox: permissions.sandbox }) as any;
         await this.refreshThreads();
         if (command.slotId) {
           const threadId = String(result?.thread?.id ?? result?.id ?? "");
@@ -154,13 +178,23 @@ export class Controller extends EventEmitter {
         const model = command.model ?? this.state.models.find((item) => item.isDefault)?.model ?? this.state.models[0]?.model;
         if (command.planMode && !model) throw new Error("Codex 模型列表尚未就绪，请刷新后重试");
         const collaborationMode = command.planMode ? { mode: "plan", settings: { model: model!, reasoning_effort: command.effort ?? null, developer_instructions: null } } : undefined;
-        const result = await this.codex.request("turn/start", { threadId: command.threadId, input: [{ type: "text", text: command.text, text_elements: [] }], model, effort: command.effort, collaborationMode });
+        const cwd = this.state.threads.find((thread) => thread.id === command.threadId)?.cwd ?? this.defaultCwd;
+        const permissions = permissionSettings(command.permissionMode, cwd);
+        const result = await this.codex.request("turn/start", { threadId: command.threadId, input: [{ type: "text", text: command.text, text_elements: [] }], model, effort: command.effort, collaborationMode, approvalPolicy: permissions.approvalPolicy, approvalsReviewer: permissions.approvalsReviewer, sandboxPolicy: permissions.sandboxPolicy });
         this.storage.saveIdempotentResult(command.idempotencyKey, result); return result;
       }
       case "turn.steer": return this.codex.request("turn/steer", { threadId: command.threadId, expectedTurnId: command.turnId, input: [{ type: "text", text: command.text, text_elements: [] }] });
       case "turn.interrupt": return this.codex.request("turn/interrupt", { threadId: command.threadId, turnId: command.turnId });
       case "approval.respond": {
-        const raw = this.storage.loadRawApproval(command.approvalRequestId) as any; if (!raw?.id) throw new Error("Approval request is no longer pending");
+        const raw = this.storage.loadRawApproval(command.approvalRequestId) as any;
+        // JSON-RPC request id 0 is valid. Only null/undefined means the
+        // request is absent; a truthiness check makes the first approval on
+        // some app-server connections impossible to answer.
+        if (raw?.id === undefined || raw?.id === null) {
+          this.storage.deleteApproval(command.approvalRequestId);
+          this.publish({ type: "approval.resolved", approvalRequestId: command.approvalRequestId });
+          throw new Error("该确认请求已失效，可能已在其他客户端处理或 Codex 已重新启动，请等待新的确认请求");
+        }
         this.codex.respond(raw.id, { decision: command.decision }); this.storage.deleteApproval(command.approvalRequestId); this.publish({ type: "approval.resolved", approvalRequestId: command.approvalRequestId }); return null;
       }
       case "desktop.openThread": {
@@ -179,6 +213,14 @@ export class Controller extends EventEmitter {
     if (this.loadedThreads.has(threadId)) return;
     await this.codex.request("thread/resume", { threadId, excludeTurns: true });
     this.loadedThreads.add(threadId);
+  }
+
+  private clearApprovals(predicate: (approval: ControllerSnapshot["approvals"][number]) => boolean = () => true) {
+    const approvals = this.state.approvals.filter(predicate);
+    for (const approval of approvals) {
+      this.storage.deleteApproval(approval.id);
+      this.publish({ type: "approval.resolved", approvalRequestId: approval.id });
+    }
   }
 
   private replaceSlot(slot: AgentSlot) { this.state.slots = this.state.slots.map((s) => s.slotId === slot.slotId ? slot : s); this.storage.saveSlot(slot); this.publish({ type: "slot.updated", slot }); }

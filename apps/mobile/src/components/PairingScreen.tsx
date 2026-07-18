@@ -1,18 +1,26 @@
 import { useMemo, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, BackHandler, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useController } from "../store/controller";
 import { useTheme, type Palette } from "../theme";
 
+const formatPairingCode = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 6);
+  return digits.length > 3 ? `${digits.slice(0, 3)}-${digits.slice(3)}` : digits;
+};
+
 export function PairingScreen() {
+  const router = useRouter();
   const t = useTheme();
   const styles = useMemo(() => createStyles(t), [t]);
   const pair = useController((s) => s.pair); const [host, setHost] = useState("http://127.0.0.1:8787"); const [code, setCode] = useState(""); const [scanning, setScanning] = useState(false); const [permission, requestPermission] = useCameraPermissions();
-  const submit = async () => { try { await pair(host, code); } catch (error) { Alert.alert("Pairing failed", error instanceof Error ? error.message : String(error)); } };
+  const submit = async () => { try { await pair(host, formatPairingCode(code)); } catch (error) { Alert.alert("Pairing failed", error instanceof Error ? error.message : String(error)); } };
+  const exitPairing = () => { if (router.canGoBack()) router.back(); else BackHandler.exitApp(); };
   const scan = async () => { if (!permission?.granted && !(await requestPermission()).granted) return; setScanning(true); };
-  if (scanning) return <View style={styles.root}><CameraView style={StyleSheet.absoluteFill} barcodeScannerSettings={{ barcodeTypes: ["qr"] }} onBarcodeScanned={({ data }) => { try { const parsed = JSON.parse(data); setHost(parsed.host); setCode(parsed.pairingCode); setScanning(false); } catch { Alert.alert("Invalid QR code"); } }} /><View style={styles.scanFrame}><View style={[styles.corner, styles.cornerTL]} /><View style={[styles.corner, styles.cornerTR]} /><View style={[styles.corner, styles.cornerBL]} /><View style={[styles.corner, styles.cornerBR]} /></View><Pressable style={styles.cancel} onPress={() => setScanning(false)}><Text style={styles.buttonText}>Cancel</Text></Pressable></View>;
-  return <View style={styles.root}><StatusBar style={t.statusBar} /><View style={styles.ambient} /><View style={styles.card}><View style={[styles.corner, styles.cornerTL]} /><View style={[styles.corner, styles.cornerTR]} /><View style={[styles.corner, styles.cornerBL]} /><View style={[styles.corner, styles.cornerBR]} /><View style={styles.brandRow}><View style={styles.brandDot} /><Text style={styles.logo}>CODEX MICRO</Text></View><Text style={styles.hint}>Pair this controller with the desktop Companion</Text><View style={styles.fieldGroup}><Text style={styles.fieldLabel}>COMPANION HOST</Text><TextInput value={host} onChangeText={setHost} autoCapitalize="none" style={styles.input} placeholder="http://desktop:8787" placeholderTextColor={t.textMuted} /></View><View style={styles.fieldGroup}><Text style={styles.fieldLabel}>PAIRING CODE</Text><TextInput value={code} onChangeText={setCode} style={styles.input} placeholder="000-000" keyboardType="number-pad" placeholderTextColor={t.textMuted} /></View><Pressable style={styles.primary} onPress={submit}><Text style={styles.buttonText}>PAIR</Text></Pressable><Pressable style={styles.secondary} onPress={scan}><Text style={styles.secondaryText}>SCAN QR</Text></Pressable><Text style={styles.note}>For USB debugging run: adb reverse tcp:8787 tcp:8787</Text></View></View>;
+  if (scanning) return <View style={styles.root}><CameraView style={StyleSheet.absoluteFill} barcodeScannerSettings={{ barcodeTypes: ["qr"] }} onBarcodeScanned={({ data }) => { try { const parsed = JSON.parse(data); setHost(parsed.host); setCode(formatPairingCode(parsed.pairingCode)); setScanning(false); } catch { Alert.alert("Invalid QR code"); } }} /><View style={styles.scanFrame}><View style={[styles.corner, styles.cornerTL]} /><View style={[styles.corner, styles.cornerTR]} /><View style={[styles.corner, styles.cornerBL]} /><View style={[styles.corner, styles.cornerBR]} /></View><Pressable style={styles.cancel} onPress={() => setScanning(false)}><Text style={styles.buttonText}>Cancel</Text></Pressable></View>;
+  return <View style={styles.root}><StatusBar style={t.statusBar} /><View style={styles.ambient} /><View style={styles.card}><View style={[styles.corner, styles.cornerTL]} /><View style={[styles.corner, styles.cornerTR]} /><View style={[styles.corner, styles.cornerBL]} /><View style={[styles.corner, styles.cornerBR]} /><Pressable accessibilityLabel="退出配对" style={styles.back} onPress={exitPairing}><Text style={styles.backText}>返回</Text></Pressable><View style={styles.brandRow}><View style={styles.brandDot} /><Text style={styles.logo}>CODEX MICRO</Text></View><Text style={styles.hint}>Pair this controller with the desktop Companion</Text><View style={styles.fieldGroup}><Text style={styles.fieldLabel}>COMPANION HOST</Text><TextInput value={host} onChangeText={setHost} autoCapitalize="none" style={styles.input} placeholder="http://desktop:8787" placeholderTextColor={t.textMuted} /></View><View style={styles.fieldGroup}><Text style={styles.fieldLabel}>PAIRING CODE</Text><TextInput value={code} onChangeText={(value) => setCode(formatPairingCode(value))} style={styles.input} placeholder="000-000" keyboardType="number-pad" maxLength={7} placeholderTextColor={t.textMuted} /></View><Pressable style={styles.primary} onPress={submit}><Text style={styles.buttonText}>PAIR</Text></Pressable><Pressable style={styles.secondary} onPress={scan}><Text style={styles.secondaryText}>SCAN QR</Text></Pressable><Text style={styles.note}>For USB debugging run: adb reverse tcp:8787 tcp:8787</Text></View></View>;
 }
 
 const createStyles = (t: Palette) => StyleSheet.create({
@@ -27,6 +35,8 @@ const createStyles = (t: Palette) => StyleSheet.create({
   brandRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   brandDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: t.accent, shadowColor: t.glow, shadowOpacity: 0.9, shadowRadius: 8, elevation: 4 },
   logo: { color: t.accent, fontSize: 28, fontWeight: "900", letterSpacing: 3, textShadowColor: t.glow, textShadowRadius: t.mode === "dark" ? 16 : 0, textShadowOffset: { width: 0, height: 0 } },
+  back: { position: "absolute", top: 13, right: 13, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 9, borderWidth: 1, borderColor: t.border, backgroundColor: t.surfaceAlt, zIndex: 2 },
+  backText: { color: t.textSecondary, fontSize: 10, fontWeight: "900", letterSpacing: 1 },
   hint: { color: t.textSecondary, marginVertical: 18, letterSpacing: 0.3 },
   fieldGroup: { marginBottom: 12 },
   fieldLabel: { color: t.textFaint, fontSize: 9, fontWeight: "900", letterSpacing: 2, marginBottom: 6 },

@@ -49,6 +49,7 @@ export class Storage {
 
   saveApproval(approval: ApprovalRequest, rawRequest: unknown) { this.db.prepare("INSERT OR REPLACE INTO approvals(id,payload,raw_request) VALUES(?,?,?)").run(approval.id, JSON.stringify(approval), JSON.stringify(rawRequest)); }
   deleteApproval(id: string) { this.db.prepare("DELETE FROM approvals WHERE id=?").run(id); }
+  clearApprovals() { this.db.prepare("DELETE FROM approvals").run(); }
   loadApprovals(): ApprovalRequest[] { return (this.db.prepare("SELECT payload FROM approvals").all() as { payload: string }[]).map((r) => JSON.parse(r.payload)); }
   loadRawApproval(id: string): unknown { const row = this.db.prepare("SELECT raw_request FROM approvals WHERE id=?").get(id) as { raw_request: string } | undefined; return row ? JSON.parse(row.raw_request) : null; }
 

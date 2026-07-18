@@ -5,7 +5,8 @@ import { Controller } from "../src/controller.js";
 describe("mobile command adapter", () => {
   const storage = () => ({
     loadSlots: () => [], loadApprovals: () => [], saveEnvelope: vi.fn(), trimEvents: vi.fn(),
-    saveSlot: vi.fn(), idempotentResult: () => undefined, saveIdempotentResult: vi.fn(),
+    saveSlot: vi.fn(), clearApprovals: vi.fn(), deleteApproval: vi.fn(),
+    idempotentResult: () => undefined, saveIdempotentResult: vi.fn(),
   });
 
   it("resumes a persisted thread and sends current app-server input fields", async () => {
@@ -51,6 +52,30 @@ describe("mobile command adapter", () => {
     await controller.refreshThreads();
 
     expect(controller.snapshot().slots[0]).toMatchObject({ title: "Updated", projectName: "new", state: "running", selected: true, updatedAt: 1_700_000_000_000 });
+  });
+
+  it("accepts a pending approval whose JSON-RPC request id is zero", async () => {
+    const backing = {
+      ...storage(),
+      loadRawApproval: vi.fn(() => ({ id: 0, method: "item/commandExecution/requestApproval", params: {} })),
+    };
+    const codex = Object.assign(new EventEmitter(), { request: vi.fn(), respond: vi.fn() });
+    const controller = new Controller(codex as any, backing as any, "D:/Code", 100);
+
+    await controller.command({ type: "approval.respond", requestId: "r0", approvalRequestId: "0", decision: "accept" });
+
+    expect(codex.respond).toHaveBeenCalledWith(0, { decision: "accept" });
+    expect(backing.deleteApproval).toHaveBeenCalledWith("0");
+  });
+
+  it("does not restore approvals from a previous app-server connection", () => {
+    const backing = { ...storage(), loadApprovals: vi.fn(() => [{ id: "old" }]) };
+    const codex = Object.assign(new EventEmitter(), { request: vi.fn(), respond: vi.fn() });
+
+    const controller = new Controller(codex as any, backing as any, "D:/Code", 100);
+
+    expect(backing.clearApprovals).toHaveBeenCalledOnce();
+    expect(controller.snapshot().approvals).toEqual([]);
   });
 
   it("keeps the ten most recent conversations in task-dial order", async () => {

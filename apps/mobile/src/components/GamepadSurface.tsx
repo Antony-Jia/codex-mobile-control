@@ -12,8 +12,9 @@ import {
   View,
 } from "react-native";
 import * as Haptics from "expo-haptics";
-import type { AgentSlot, Effort, ModelOption } from "@codex-micro/protocol";
+import type { AgentSlot, Effort, ModelOption, PermissionMode } from "@codex-micro/protocol";
 import { useTheme, type Palette } from "../theme";
+import { PermissionModePicker } from "./PermissionModePicker";
 
 type Props = {
   slots: AgentSlot[];
@@ -27,6 +28,7 @@ type Props = {
   effort: Effort;
   model: string | null;
   models: ModelOption[];
+  permissionMode: PermissionMode;
   planMode: boolean;
   draft: string;
   threadId: string | null;
@@ -36,6 +38,7 @@ type Props = {
   onSelectSlot: (slotId: number) => void;
   onEffort: (effort: Effort) => void;
   onModel: (model: string) => void;
+  onPermissionMode: (value: PermissionMode) => void;
   onPlanMode: (value: boolean) => void;
   onDraft: (value: string) => void;
   onSend: () => void;
@@ -193,9 +196,9 @@ function EffortSlider({ effort, onEffort }: { effort: Effort; onEffort: (value: 
 }
 
 export function GamepadSurface({
-  slots, selectedSlotId, openingSlotId, output, diff, historyOutput, historyLoading, tab, effort, model, models, planMode, draft,
+  slots, selectedSlotId, openingSlotId, output, diff, historyOutput, historyLoading, tab, effort, model, models, permissionMode, planMode, draft,
   threadId, turnId, sending, commandError, onSelectSlot, onEffort, onModel, onPlanMode, onDraft,
-  onSend, onStop, onTab, onOpenSessions, onCreate, onClearError, onToggleMode,
+  onPermissionMode, onSend, onStop, onTab, onOpenSessions, onCreate, onClearError, onToggleMode,
 }: Props) {
   const t = useTheme();
   const styles = useMemo(() => createStyles(t), [t]);
@@ -235,12 +238,12 @@ export function GamepadSurface({
   };
 
   return <View style={styles.page}>
-    <View style={[styles.shell, compact && styles.shellCompact]}>
+      <View style={[styles.shell, compact && styles.shellCompact]}>
       <View style={styles.header}>
         <Pressable accessibilityLabel="切换到控制台模式" onPress={onToggleMode} style={styles.logo}>
           <Text style={styles.logoText}>CODEX MICRO</Text>
         </Pressable>
-        <Pressable accessibilityLabel="新建会话" style={styles.createButton} onPress={onCreate}><Text style={styles.createButtonText}>＋</Text></Pressable>
+        <View style={styles.headerActions}><PermissionModePicker compact value={permissionMode} onChange={onPermissionMode} /><Pressable accessibilityLabel="新建会话" style={styles.createButton} onPress={onCreate}><Text style={styles.createButtonText}>＋</Text></Pressable></View>
       </View>
 
       <View style={styles.deck}>
@@ -307,6 +310,7 @@ const createStyles = (t: Palette) => StyleSheet.create({
   shell: { flex: 1, minHeight: 0, borderRadius: 22, borderWidth: 1, borderColor: t.borderStrong, backgroundColor: t.surface, padding: 12, overflow: "hidden", shadowColor: t.glow, shadowOpacity: t.mode === "dark" ? 0.18 : 0.06, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
   shellCompact: { padding: 9, borderRadius: 18 },
   header: { height: 30, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, marginBottom: 4 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 7 },
   logo: { minWidth: 220 },
   logoText: { color: t.textPrimary, fontWeight: "900", fontSize: 15, letterSpacing: 4, textShadowColor: t.glow, textShadowRadius: t.mode === "dark" ? 12 : 0, textShadowOffset: { width: 0, height: 0 } },
   createButton: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: t.accentBg, borderWidth: 1, borderColor: t.accentBorder, shadowColor: t.glow, shadowOpacity: t.mode === "dark" ? 0.4 : 0.18, shadowRadius: 8, elevation: 3 },

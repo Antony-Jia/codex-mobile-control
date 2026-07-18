@@ -1,17 +1,20 @@
 import { useMemo } from "react";
 import * as Haptics from "expo-haptics";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import type { Effort, ModelOption } from "@codex-micro/protocol";
+import type { Effort, ModelOption, PermissionMode } from "@codex-micro/protocol";
+import { PermissionModePicker, permissionModeOptions } from "./PermissionModePicker";
 import { useTheme, type Palette } from "../theme";
 
 type Props = {
   effort: Effort;
   model: string | null;
   models: ModelOption[];
+  permissionMode: PermissionMode;
   planMode: boolean;
   expanded: boolean;
   onEffort: (value: Effort) => void;
   onModel: (value: string) => void;
+  onPermissionMode: (value: PermissionMode) => void;
   onPlanMode: (value: boolean) => void;
   onExpanded: (value: boolean) => void;
 };
@@ -25,7 +28,8 @@ export function ControlDeck(props: Props) {
   const styles = useMemo(() => createStyles(t), [t]);
   const selectedModel = props.models.find((item) => item.model === props.model);
   const efforts = selectedModel?.supportedEfforts.length ? selectedModel.supportedEfforts : allEfforts;
-  const summary = `${props.planMode ? "先给方案" : "直接执行"} · ${selectedModel?.displayName ?? "读取模型中"} · ${effortLabels[props.effort]}`;
+  const permissionLabel = permissionModeOptions.find((item) => item.value === props.permissionMode)?.label ?? "请求批准";
+  const summary = `${props.planMode ? "先给方案" : "直接执行"} · ${permissionLabel} · ${selectedModel?.displayName ?? "读取模型中"} · ${effortLabels[props.effort]}`;
 
   return <View style={styles.root}>
     <Pressable accessibilityLabel={props.expanded ? "收起运行设置" : "展开运行设置"} style={styles.header} onPress={() => props.onExpanded(!props.expanded)}>
@@ -42,6 +46,9 @@ export function ControlDeck(props: Props) {
         <Pressable accessibilityState={{ selected: !props.planMode }} style={[styles.segment, !props.planMode && styles.active]} onPress={() => tap(() => props.onPlanMode(false))}><Text style={[styles.segmentText, !props.planMode && styles.activeText]}>直接执行</Text></Pressable>
         <Pressable accessibilityState={{ selected: props.planMode }} style={[styles.segment, props.planMode && styles.active]} onPress={() => tap(() => props.onPlanMode(true))}><Text style={[styles.segmentText, props.planMode && styles.activeText]}>先给方案</Text></Pressable>
       </View>
+
+      <Text style={styles.label}>权限模式</Text>
+      <PermissionModePicker value={props.permissionMode} onChange={props.onPermissionMode} />
 
       <Text style={styles.label}>模型</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.modelRow}>

@@ -5,6 +5,9 @@ export const PROTOCOL_VERSION = 1 as const;
 export const effortSchema = z.enum(["low", "medium", "high", "xhigh"]);
 export type Effort = z.infer<typeof effortSchema>;
 
+export const permissionModeSchema = z.enum(["ask", "auto", "full"]);
+export type PermissionMode = z.infer<typeof permissionModeSchema>;
+
 export type ModelOption = {
   id: string;
   model: string;
@@ -57,11 +60,11 @@ export const clientCommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("thread.list"), requestId: z.string() }),
   z.object({ type: z.literal("thread.history"), requestId: z.string(), threadId: z.string() }),
   z.object({ type: z.literal("model.list"), requestId: z.string() }),
-  z.object({ type: z.literal("thread.create"), requestId: z.string(), cwd: z.string().optional(), slotId: z.number().int().min(1).max(10).optional() }),
+  z.object({ type: z.literal("thread.create"), requestId: z.string(), cwd: z.string().optional(), slotId: z.number().int().min(1).max(10).optional(), permissionMode: permissionModeSchema.optional() }),
   z.object({ type: z.literal("thread.fork"), requestId: z.string(), threadId: z.string() }),
   z.object({ type: z.literal("slot.assign"), requestId: z.string(), slotId: z.number().int().min(1).max(10), threadId: z.string().nullable() }),
   z.object({ type: z.literal("slot.select"), requestId: z.string(), slotId: z.number().int().min(1).max(10).nullable() }),
-  z.object({ type: z.literal("turn.start"), requestId: z.string(), idempotencyKey: z.string(), threadId: z.string(), text: z.string().min(1), model: z.string().optional(), effort: effortSchema.optional(), planMode: z.boolean().optional() }),
+  z.object({ type: z.literal("turn.start"), requestId: z.string(), idempotencyKey: z.string(), threadId: z.string(), text: z.string().min(1), model: z.string().optional(), effort: effortSchema.optional(), planMode: z.boolean().optional(), permissionMode: permissionModeSchema.optional() }),
   z.object({ type: z.literal("turn.steer"), requestId: z.string(), threadId: z.string(), turnId: z.string(), text: z.string().min(1) }),
   z.object({ type: z.literal("turn.interrupt"), requestId: z.string(), threadId: z.string(), turnId: z.string() }),
   z.object({ type: z.literal("approval.respond"), requestId: z.string(), approvalRequestId: z.string(), decision: z.enum(["accept", "acceptForSession", "decline", "cancel"]) }),

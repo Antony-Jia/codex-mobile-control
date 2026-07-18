@@ -34,6 +34,17 @@ describe("controller reducer", () => {
     expect(state.approvals).toHaveLength(1);
   });
 
+  it("returns a slot to the active turn after its approval is resolved", () => {
+    let state = createSnapshot();
+    state.slots[0] = assignSlot(state.slots[0]!, { id: "t1", title: "Work", cwd: null, updatedAt: 1 });
+    state = reduceController(state, { type: "turn.started", threadId: "t1", turnId: "turn1" });
+    state = reduceController(state, { type: "approval.requested", approval: { id: "0", threadId: "t1", turnId: "turn1", kind: "command", title: "Approve", command: "npm test", cwd: null, reason: null, createdAt: 1 } });
+    state = reduceController(state, { type: "approval.resolved", approvalRequestId: "0" });
+
+    expect(state.approvals).toEqual([]);
+    expect(state.slots[0]?.state).toBe("running");
+  });
+
   it("keeps selection exclusive and allows clearing it", () => {
     let state = selectSlot(createSnapshot(), 1);
     state = selectSlot(state, 2);

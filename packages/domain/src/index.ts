@@ -58,7 +58,19 @@ export function reduceController(state: ControllerSnapshot, event: ServerEvent):
   if (event.type === "approval.requested") {
     return { ...state, approvals: [...state.approvals.filter((a) => a.id !== event.approval.id), event.approval], slots: state.slots.map((s) => s.threadId === event.approval.threadId ? { ...s, state: "needs_input", updatedAt: Date.now() } : s) };
   }
-  if (event.type === "approval.resolved") return { ...state, approvals: state.approvals.filter((a) => a.id !== event.approvalRequestId) };
+  if (event.type === "approval.resolved") {
+    const resolved = state.approvals.find((approval) => approval.id === event.approvalRequestId);
+    const approvals = state.approvals.filter((approval) => approval.id !== event.approvalRequestId);
+    if (!resolved) return { ...state, approvals };
+    const stillWaiting = approvals.some((approval) => approval.threadId === resolved.threadId);
+    return {
+      ...state,
+      approvals,
+      slots: state.slots.map((slot) => slot.threadId === resolved.threadId
+        ? { ...slot, state: stillWaiting ? "needs_input" : state.activeTurns[resolved.threadId] ? "running" : "idle", updatedAt: Date.now() }
+        : slot),
+    };
+  }
   if (event.type === "turn.started") {
     const currentOutput = state.outputs[event.threadId] ?? "";
     const previousOutputs = state.previousOutputs ?? {};

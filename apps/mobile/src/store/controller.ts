@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { createSnapshot, reduceController, selectSlot as selectSlotState } from "@codex-micro/domain";
-import type { ClientCommand, ControllerSnapshot, Effort, EventEnvelope } from "@codex-micro/protocol";
+import type { ClientCommand, ControllerSnapshot, Effort, EventEnvelope, PermissionMode } from "@codex-micro/protocol";
 import { clearConnection, loadConnection, saveConnection, type Connection } from "../lib/persistence";
 
 type Store = {
@@ -10,6 +10,7 @@ type Store = {
   error: string | null;
   effort: Effort;
   model: string | null;
+  permissionMode: PermissionMode;
   socket: WebSocket | null;
   pendingRequests: Record<string, ClientCommand["type"]>;
   commandError: string | null;
@@ -21,6 +22,7 @@ type Store = {
   selectSlot: (slotId: number) => void;
   setEffort: (effort: Effort) => void;
   setModel: (model: string) => void;
+  setPermissionMode: (mode: PermissionMode) => void;
   clearCommandError: () => void;
 };
 
@@ -28,7 +30,7 @@ const normalizeHost = (host: string) => host.trim().replace(/\/$/, "");
 const id = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 export const useController = create<Store>((set, get) => ({
-  state: createSnapshot(), connection: null, status: "loading", error: null, effort: "medium", model: null, socket: null, pendingRequests: {}, commandError: null,
+  state: createSnapshot(), connection: null, status: "loading", error: null, effort: "medium", model: null, permissionMode: "ask", socket: null, pendingRequests: {}, commandError: null,
   boot: async () => { const connection = await loadConnection(); set({ connection, status: connection ? "connecting" : "disconnected" }); if (connection) get().connect(); },
   pair: async (rawHost, pairingCode) => {
     const host = normalizeHost(rawHost); const deviceId = `android-${Math.random().toString(36).slice(2, 12)}`;
@@ -89,6 +91,7 @@ export const useController = create<Store>((set, get) => ({
     const option = get().state.models.find((item) => item.model === model);
     set({ model, effort: option && !option.supportedEfforts.includes(get().effort) ? option.defaultEffort : get().effort });
   },
+  setPermissionMode: (permissionMode) => set({ permissionMode }),
   clearCommandError: () => set({ commandError: null }),
 }));
 

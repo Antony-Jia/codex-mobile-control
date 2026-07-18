@@ -48,6 +48,7 @@ export default function Home() {
   const managingSessions = Object.values(store.pendingRequests).some((type) => type === "thread.create" || type === "slot.assign");
   const loadingSessions = Object.values(store.pendingRequests).some((type) => type === "thread.list");
   const historyLoading = Object.values(store.pendingRequests).some((type) => type === "thread.history");
+  const approvalSending = Object.values(store.pendingRequests).some((type) => type === "approval.respond");
   const targetSlotId = selected?.slotId ?? store.state.selectedSlotId ?? 1;
   const defaultCwd = selected?.threadId ? store.state.threads.find((thread) => thread.id === selected.threadId)?.cwd ?? "" : "";
 
@@ -75,7 +76,7 @@ export default function Home() {
   };
 
   const createSession = (cwd: string) => {
-    store.send({ type: "thread.create", requestId: commandId(), cwd: cwd || undefined, slotId: targetSlotId });
+    store.send({ type: "thread.create", requestId: commandId(), cwd: cwd || undefined, slotId: targetSlotId, permissionMode: store.permissionMode });
     setSessionsOpen(false);
   };
 
@@ -95,7 +96,7 @@ export default function Home() {
       const requestId = commandId();
       store.send(turnId
         ? { type: "turn.steer", requestId, threadId, turnId, text }
-        : { type: "turn.start", requestId, idempotencyKey: commandId(), threadId, text, model: store.model ?? undefined, effort: store.effort, planMode });
+        : { type: "turn.start", requestId, idempotencyKey: commandId(), threadId, text, model: store.model ?? undefined, effort: store.effort, planMode, permissionMode: store.permissionMode });
       setDraft("");
     } catch (error) { Alert.alert("发送失败", String(error)); }
   };
@@ -116,8 +117,8 @@ export default function Home() {
     {gamepadMode ? <GamepadSurface
       slots={store.state.slots} selectedSlotId={store.state.selectedSlotId} openingSlotId={openingSlotId}
       output={output} diff={diff} historyOutput={historyOutput} historyLoading={historyLoading} tab={tab} effort={store.effort} model={store.model} models={store.state.models}
-      planMode={planMode} draft={draft} threadId={threadId} turnId={turnId} sending={sending} commandError={store.commandError}
-      onSelectSlot={selectAndOpen} onEffort={store.setEffort} onModel={store.setModel} onPlanMode={setPlanMode} onDraft={setDraft} onSend={send}
+      permissionMode={store.permissionMode} planMode={planMode} draft={draft} threadId={threadId} turnId={turnId} sending={sending} commandError={store.commandError}
+      onSelectSlot={selectAndOpen} onEffort={store.setEffort} onModel={store.setModel} onPermissionMode={store.setPermissionMode} onPlanMode={setPlanMode} onDraft={setDraft} onSend={send}
       onStop={() => turnId && threadId && store.send({ type: "turn.interrupt", requestId: commandId(), threadId, turnId })}
       onTab={setTab} onOpenSessions={() => openSessions(false)} onCreate={() => openSessions(true)} onClearError={store.clearCommandError} onToggleMode={() => { void Haptics.selectionAsync(); setGamepadMode(false); }}
     /> : <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -137,11 +138,11 @@ export default function Home() {
 
       {store.commandError && <Pressable style={styles.errorBox} onPress={store.clearCommandError}><Text style={styles.errorTitle}>命令未执行</Text><Text selectable style={styles.errorText}>{store.commandError}</Text><Text style={styles.errorHint}>点击关闭</Text></Pressable>}
 
-      <ControlDeck effort={store.effort} model={store.model} models={store.state.models} planMode={planMode} expanded={settingsOpen} onEffort={store.setEffort} onModel={store.setModel} onPlanMode={setPlanMode} onExpanded={setSettingsOpen} />
+      <ControlDeck effort={store.effort} model={store.model} models={store.state.models} permissionMode={store.permissionMode} planMode={planMode} expanded={settingsOpen} onEffort={store.setEffort} onModel={store.setModel} onPermissionMode={store.setPermissionMode} onPlanMode={setPlanMode} onExpanded={setSettingsOpen} />
 
       {approval && <View style={styles.approval}>
         <Text style={styles.approvalTitle}>需要确认</Text><Text style={styles.approvalBody}>{approval.command ?? approval.title}</Text><Text style={styles.approvalReason}>{approval.reason}</Text>
-        <View style={styles.actions}><Pressable style={styles.approve} onPress={() => { void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); store.send({ type: "approval.respond", requestId: commandId(), approvalRequestId: approval.id, decision: "accept" }); }}><Text style={styles.actionText}>允许</Text></Pressable><Pressable style={styles.decline} onPress={() => store.send({ type: "approval.respond", requestId: commandId(), approvalRequestId: approval.id, decision: "decline" })}><Text style={styles.actionText}>拒绝</Text></Pressable></View>
+        <View style={styles.actions}><Pressable disabled={approvalSending} style={[styles.approve, approvalSending && styles.disabled]} onPress={() => { void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); store.send({ type: "approval.respond", requestId: commandId(), approvalRequestId: approval.id, decision: "accept" }); }}><Text style={styles.actionText}>{approvalSending ? "处理中…" : "允许"}</Text></Pressable><Pressable disabled={approvalSending} style={[styles.decline, approvalSending && styles.disabled]} onPress={() => store.send({ type: "approval.respond", requestId: commandId(), approvalRequestId: approval.id, decision: "decline" })}><Text style={styles.actionText}>拒绝</Text></Pressable></View>
       </View>}
 
       <View style={styles.console}>

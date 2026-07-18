@@ -101,6 +101,12 @@ corepack pnpm build
 
 `usesCleartextTraffic` 只用于 Development Build 的 LAN/USB 调试。生产使用应通过 Tailscale，或由 Caddy/Nginx 在 Companion 前提供 WSS，并在 release 配置中禁用明文流量。不要把 `8787` 或 Codex App Server 直接暴露到公网。
 
+## 已知问题：移动端与官方桌面端会话同步
+
+如果通过 ChatGPT/Codex 移动端的 Remote Control 向官方 Codex 桌面端线程发送消息，桌面端偶尔不会及时刷新会话记录：移动端已经收到答复，但桌面端仍显示旧内容，通常需要重新打开或重启桌面端应用后才会出现新消息。
+
+这是上游 Codex Desktop 的会话同步问题，不是本项目配对、WebSocket 或任务协议导致的。临时处理方式是重新打开对应线程；如果仍未更新，再重启 Codex 桌面端。相关反馈见 [openai/codex#22773](https://github.com/openai/codex/issues/22773)。
+
 ## 当前边界
 
 - 官方桌面客户端和手机不会实时共同编辑同一个正在运行的 Turn；`OPEN DESKTOP` 通过 `codex://threads/<id>` 打开对应线程。
